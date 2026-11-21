@@ -32,6 +32,11 @@ export const LiveCameraDetector: React.FC<LiveCameraDetectorProps> = ({ onObserv
   const [lon, setLon] = useState<number>(77.3944);
   const [heading, setHeading] = useState<number>(45.0);
   const [deviceId, setDeviceId] = useState<string>('veh-dashcam-01');
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [gpsLoading, setGpsLoading] = useState<boolean>(false);
+  const [gpsStatus, setGpsStatus] = useState<string>('idle');
+  const [isLiveGpsTracking, setIsLiveGpsTracking] = useState<boolean>(false);
+  const watchIdRef = useRef<number | null>(null);
 
   // Webcam states
   const [cameraActive, setCameraActive] = useState(false);
@@ -41,23 +46,114 @@ export const LiveCameraDetector: React.FC<LiveCameraDetectorProps> = ({ onObserv
   const streamRef = useRef<MediaStream | null>(null);
   const liveIntervalRef = useRef<any>(null);
 
-  // Acquire real browser location if permitted
-  const handleGetBrowserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+  // Acquire real browser location with high-accuracy GPS options
+  const requestPreciseLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsStatus('Geolocation not supported by this browser.');
+      return;
+    }
+
+    setGpsLoading(true);
+    setGpsStatus('Requesting high-precision GPS lock...');
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy, heading: hdg } = pos.coords;
+        setLat(Number(latitude.toFixed(6)));
+        setLon(Number(longitude.toFixed(6)));
+        setGpsAccuracy(accuracy ? Number(accuracy.toFixed(1)) : null);
+        if (hdg !== null && !isNaN(hdg)) {
+          setHeading(Number(hdg.toFixed(1)));
+        }
+        setGpsLoading(false);
+        setGpsStatus(`GPS Locked (±${accuracy ? accuracy.toFixed(1) : '?'}m)`);
+      },
+      (err) => {
+        setGpsLoading(false);
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            setGpsStatus('Permission denied. Please allow location in your browser bar.');
+            break;
+          case err.POSITION_UNAVAILABLE:
+            setGpsStatus('Position unavailable. Check GPS/Network.');
+            break;
+          case err.TIMEOUT:
+            setGpsStatus('GPS acquisition timed out. Retrying with fallback...');
+            navigator.geolocation.getCurrentPosition(
+              (fallbackPos) => {
+                setLat(Number(fallbackPos.coords.latitude.toFixed(6)));
+                setLon(Number(fallbackPos.coords.longitude.toFixed(6)));
+                setGpsStatus('Approximate location locked');
+              },
+              () => setGpsStatus('Could not determine location.')
+            );
+            break;
+          default:
+            setGpsStatus(`Error: ${err.message}`);
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
+  // Toggle Continuous Real-time Road GPS Tracking (e.g. while driving)
+  const toggleLiveGpsTracking = () => {
+    if (isLiveGpsTracking) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setIsLiveGpsTracking(false);
+      setGpsStatus('Continuous tracking stopped');
+    } else {
+      if (!navigator.geolocation) {
+        setGpsStatus('Geolocation not supported.');
+        return;
+      }
+      setIsLiveGpsTracking(true);
+      setGpsStatus('Continuous road GPS active...');
+      watchIdRef.current = navigator.geolocation.watchPosition(
         (pos) => {
-          setLat(pos.coords.latitude);
-          setLon(pos.coords.longitude);
-          if (pos.coords.heading != null && !isNaN(pos.coords.heading)) {
-            setHeading(pos.coords.heading);
+          const { latitude, longitude, accuracy, heading: hdg } = pos.coords;
+          setLat(Number(latitude.toFixed(6)));
+          setLon(Number(longitude.toFixed(6)));
+          setGpsAccuracy(accuracy ? Number(accuracy.toFixed(1)) : null);
+          if (hdg !== null && !isNaN(hdg)) {
+            setHeading(Number(hdg.toFixed(1)));
           }
+          setGpsStatus(`Tracking live: ±${accuracy ? accuracy.toFixed(1) : '?'}m`);
         },
         (err) => {
-          console.warn('Geolocation denied or unavailable:', err.message);
+          setGpsStatus(`Tracking error: ${err.message}`);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 1000,
+          timeout: 10000,
         }
       );
     }
   };
+
+  // Attempt initial location fetch once on component mount if user has already granted permission
+  useEffect(() => {
+    if (navigator.geolocation && navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((res) => {
+        if (res.state === 'granted') {
+          requestPreciseLocation();
+        }
+      }).catch(() => {});
+    }
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
 
   // Start Webcam
   const startCamera = async () => {
@@ -175,39 +271,37 @@ export const LiveCameraDetector: React.FC<LiveCameraDetectorProps> = ({ onObserv
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Viewport / Input Stream Panel */}
-      <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
+      {/* Viewport / Input Stream Panel - RawBlock */}
+      <div className="lg:col-span-2 bg-[#FFFFFF] border-[5px] border-[#000000] p-6 space-y-4">
         {/* Stream Mode Selection Tabs */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex flex-wrap items-center justify-between border-b-[3px] border-[#000000] pb-4 gap-2">
           <div className="flex space-x-2">
             <button
               onClick={() => { setMode('upload'); stopCamera(); }}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                mode === 'upload' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800'
+              className={`px-4 py-2 text-xs font-mono font-bold uppercase tracking-[1px] border-[3px] border-[#000000] transition-colors ${
+                mode === 'upload' ? 'bg-[#000000] text-[#FFFFFF]' : 'bg-[#FFFFFF] text-[#000000] hover:bg-[#000000] hover:text-[#FFFFFF]'
               }`}
             >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Image / Video Upload</span>
+              [FILE UPLOAD]
             </button>
             <button
               onClick={() => setMode('webcam')}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                mode === 'webcam' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:bg-slate-800'
+              className={`px-4 py-2 text-xs font-mono font-bold uppercase tracking-[1px] border-[3px] border-[#000000] transition-colors ${
+                mode === 'webcam' ? 'bg-[#000000] text-[#FFFFFF]' : 'bg-[#FFFFFF] text-[#000000] hover:bg-[#000000] hover:text-[#FFFFFF]'
               }`}
             >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Live Vehicle Camera</span>
+              [LIVE CAMERA]
             </button>
           </div>
 
-          <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${cameraActive || result ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+          <div className="flex items-center space-x-2 text-xs font-mono font-bold uppercase text-[#000000]">
+            <span className={`w-3 h-3 border-[2px] border-[#000000] ${cameraActive || result ? 'bg-[#008000]' : 'bg-[#000000]'}`} />
             <span>{isProcessing ? 'INFERENCING...' : isLiveInferencing ? 'LIVE DETECTING' : 'READY'}</span>
           </div>
         </div>
 
         {/* Media Frame Viewer */}
-        <div className="relative aspect-video w-full bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
+        <div className="relative aspect-video w-full bg-[#F0F0F0] border-[3px] border-[#000000] flex items-center justify-center overflow-hidden">
           {mode === 'webcam' ? (
             <>
               <video
@@ -218,15 +312,12 @@ export const LiveCameraDetector: React.FC<LiveCameraDetectorProps> = ({ onObserv
               />
               {!cameraActive && (
                 <div className="text-center p-6 space-y-3">
-                  <div className="p-3 bg-slate-900 rounded-full w-fit mx-auto border border-slate-800 text-slate-400">
-                    <Camera className="w-8 h-8" />
-                  </div>
-                  <p className="text-sm text-slate-300 font-medium">Forward Vehicle Dashcam Feed</p>
+                  <p className="font-headline text-lg uppercase text-[#000000]">FORWARD DASHCAM FEED</p>
                   <button
                     onClick={startCamera}
-                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold shadow-lg shadow-cyan-600/30 transition"
+                    className="px-6 py-3 bg-[#000000] text-[#FFFFFF] font-mono text-xs font-bold uppercase tracking-[2px] border-[3px] border-[#000000] hover:bg-[#FFFFFF] hover:text-[#000000] transition-colors"
                   >
-                    Activate Camera Stream
+                    ACTIVATE CAMERA STREAM
                   </button>
                 </div>
               )}
@@ -246,10 +337,9 @@ export const LiveCameraDetector: React.FC<LiveCameraDetectorProps> = ({ onObserv
                   className="w-full h-full object-contain"
                 />
               ) : (
-                <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-slate-900/50 transition border-2 border-dashed border-slate-800 rounded-xl p-6">
-                  <Upload className="w-10 h-10 text-cyan-400 mb-2" />
-                  <span className="text-sm font-semibold text-slate-300">Choose Road Image or Video Frame</span>
-                  <span className="text-xs text-slate-500 mt-1">JPEG, PNG, WebP up to 15MB</span>
+                <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-[#E8E8E8] transition-colors border-[3px] border-dashed border-[#000000] p-6">
+                  <span className="font-headline text-lg uppercase text-[#000000] mb-2">[ CHOOSE ROAD IMAGE / VIDEO FRAME ]</span>
+                  <span className="font-mono text-xs text-[#000000] uppercase">JPEG, PNG, WEBP (RAW RESOLUTION)</span>
                   <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                 </label>
               )}
@@ -269,153 +359,170 @@ export const LiveCameraDetector: React.FC<LiveCameraDetectorProps> = ({ onObserv
                   <button
                     onClick={handleCaptureSnapshot}
                     disabled={isProcessing}
-                    className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition"
+                    className="px-4 py-2 bg-[#000000] text-[#FFFFFF] font-mono text-xs font-bold uppercase tracking-[1px] border-[3px] border-[#000000] hover:bg-[#FFFFFF] hover:text-[#000000] transition-colors"
                   >
-                    <Zap className="w-3.5 h-3.5" />
-                    <span>Single Snapshot</span>
+                    SINGLE SNAPSHOT
                   </button>
                   {isLiveInferencing ? (
                     <button
                       onClick={stopLiveInference}
-                      className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition"
+                      className="px-4 py-2 bg-[#FF0000] text-[#FFFFFF] font-mono text-xs font-bold uppercase tracking-[1px] border-[3px] border-[#000000] hover:bg-[#000000] hover:text-[#FF0000] transition-colors"
                     >
-                      <Square className="w-3.5 h-3.5" />
-                      <span>Stop Live Detection</span>
+                      STOP SCAN
                     </button>
                   ) : (
                     <button
                       onClick={startLiveInference}
-                      className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition"
+                      className="px-4 py-2 bg-[#008000] text-[#FFFFFF] font-mono text-xs font-bold uppercase tracking-[1px] border-[3px] border-[#000000] hover:bg-[#000000] hover:text-[#008000] transition-colors"
                     >
-                      <Play className="w-3.5 h-3.5" />
-                      <span>Start Continuous AI Scan</span>
+                      START CONTINUOUS AI SCAN
                     </button>
                   )}
                   <button
                     onClick={stopCamera}
-                    className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+                    className="px-3 py-2 bg-[#FFFFFF] text-[#000000] font-mono text-xs font-bold uppercase tracking-[1px] border-[3px] border-[#000000] hover:bg-[#000000] hover:text-[#FFFFFF] transition-colors"
                   >
-                    Disable Camera
+                    DISABLE CAMERA
                   </button>
                 </>
               ) : null}
             </div>
           ) : (
             <div className="flex items-center space-x-3">
-              <label className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg cursor-pointer border border-slate-700 transition">
-                <span>Select New File</span>
+              <label className="px-4 py-2 bg-[#FFFFFF] hover:bg-[#000000] hover:text-[#FFFFFF] text-[#000000] text-xs font-mono font-bold uppercase tracking-[1px] border-[3px] border-[#000000] cursor-pointer transition-colors">
+                <span>SELECT NEW FILE</span>
                 <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               </label>
               {selectedFile && (
                 <button
                   onClick={handleUploadSubmit}
                   disabled={isProcessing}
-                  className="flex items-center space-x-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-cyan-600/30 transition"
+                  className="px-5 py-2 bg-[#000000] text-[#FFFFFF] hover:bg-[#FFFFFF] hover:text-[#000000] text-xs font-mono font-bold uppercase tracking-[2px] border-[3px] border-[#000000] transition-colors"
                 >
-                  <Zap className={`w-3.5 h-3.5 ${isProcessing ? 'animate-spin' : ''}`} />
-                  <span>{isProcessing ? 'Analyzing Frame...' : 'Run Pothole Detection'}</span>
+                  {isProcessing ? 'ANALYZING...' : 'RUN POTHOLE DETECTION'}
                 </button>
               )}
             </div>
           )}
 
           {result && (
-            <div className="text-xs font-mono text-slate-400">
-              Latency: <span className="text-cyan-400 font-bold">{result.inference_time_ms} ms</span> | Engine: <span className="text-slate-300">{result.model_used}</span>
+            <div className="text-xs font-mono font-bold uppercase text-[#000000]">
+              LATENCY: <span className="text-[#0000FF]">{result.inference_time_ms} MS</span> | ENGINE: {result.model_used}
             </div>
           )}
         </div>
       </div>
 
-      {/* Geotagging & Telemetry Metadata Panel */}
+      {/* Geotagging & Telemetry Metadata Panel - RawBlock */}
       <div className="space-y-6">
-        {/* GPS Geotag Settings */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono">Location Metadata</h3>
-            </div>
-            <label className="flex items-center space-x-2 text-xs text-slate-400 cursor-pointer">
+        <div className="bg-[#FFFFFF] border-[5px] border-[#000000] p-6 space-y-4">
+          <div className="flex items-center justify-between border-b-[3px] border-[#000000] pb-3">
+            <h3 className="font-headline text-sm uppercase text-[#000000]">LOCATION METADATA</h3>
+            <label className="flex items-center space-x-2 text-xs font-mono font-bold uppercase text-[#000000] cursor-pointer">
               <input
                 type="checkbox"
                 checked={gpsEnabled}
                 onChange={(e) => setGpsEnabled(e.target.checked)}
-                className="rounded border-slate-700 text-cyan-500 focus:ring-0"
+                className="w-5 h-5 border-[3px] border-[#000000] rounded-none accent-[#000000]"
               />
-              <span>Attach GPS</span>
+              <span>ATTACH GPS</span>
             </label>
           </div>
 
           {gpsEnabled ? (
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3 text-xs font-mono">
               <div>
-                <label className="text-slate-400 block mb-1">Latitude</label>
+                <label className="font-headline text-[12px] uppercase block mb-1 text-[#000000]">LATITUDE</label>
                 <input
                   type="number"
                   step="0.0001"
                   value={lat}
                   onChange={(e) => setLat(parseFloat(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none"
+                  className="w-full bg-[#F0F0F0] border-[3px] border-[#000000] focus:border-[5px] focus:outline-none p-2 font-mono text-sm text-[#000000] font-bold"
                 />
               </div>
               <div>
-                <label className="text-slate-400 block mb-1">Longitude</label>
+                <label className="font-headline text-[12px] uppercase block mb-1 text-[#000000]">LONGITUDE</label>
                 <input
                   type="number"
                   step="0.0001"
                   value={lon}
                   onChange={(e) => setLon(parseFloat(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none"
+                  className="w-full bg-[#F0F0F0] border-[3px] border-[#000000] focus:border-[5px] focus:outline-none p-2 font-mono text-sm text-[#000000] font-bold"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-slate-400 block mb-1">Vehicle Heading (°)</label>
+                  <label className="font-headline text-[12px] uppercase block mb-1 text-[#000000]">HEADING (°)</label>
                   <input
                     type="number"
                     min="0"
                     max="360"
                     value={heading}
                     onChange={(e) => setHeading(parseFloat(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none"
+                    className="w-full bg-[#F0F0F0] border-[3px] border-[#000000] focus:border-[5px] focus:outline-none p-2 font-mono text-sm text-[#000000] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 block mb-1">Device ID</label>
+                  <label className="font-headline text-[12px] uppercase block mb-1 text-[#000000]">DEVICE ID</label>
                   <input
                     type="text"
                     value={deviceId}
                     onChange={(e) => setDeviceId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none"
+                    className="w-full bg-[#F0F0F0] border-[3px] border-[#000000] focus:border-[5px] focus:outline-none p-2 font-mono text-sm text-[#000000] font-bold"
                   />
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleGetBrowserLocation}
-                className="w-full mt-2 py-1.5 px-3 bg-slate-850 hover:bg-slate-800 text-cyan-400 rounded-lg text-xs font-medium border border-slate-800 transition"
-              >
-                Sync Device Browser GPS
-              </button>
+              {/* Status Indicator */}
+              <div className="p-3 bg-[#F0F0F0] border-[3px] border-[#000000] space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-bold uppercase">
+                  <span>GPS LOCK:</span>
+                  <span className={gpsAccuracy ? 'text-[#008000]' : 'text-[#000000]'}>{gpsStatus}</span>
+                </div>
+                {gpsAccuracy !== null && (
+                  <div className="flex items-center justify-between text-[11px] font-bold uppercase">
+                    <span>ACCURACY:</span>
+                    <span>±{gpsAccuracy} METERS</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={requestPreciseLocation}
+                  disabled={gpsLoading}
+                  className="py-2 px-3 bg-[#000000] text-[#FFFFFF] hover:bg-[#FFFFFF] hover:text-[#000000] border-[3px] border-[#000000] font-mono text-xs font-bold uppercase tracking-[1px] transition-colors"
+                >
+                  {gpsLoading ? 'ACQUIRING...' : 'FETCH GPS'}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleLiveGpsTracking}
+                  className={`py-2 px-3 font-mono text-xs font-bold uppercase tracking-[1px] border-[3px] border-[#000000] transition-colors ${
+                    isLiveGpsTracking ? 'bg-[#FF0000] text-[#FFFFFF]' : 'bg-[#FFFFFF] text-[#000000] hover:bg-[#000000] hover:text-[#FFFFFF]'
+                  }`}
+                >
+                  {isLiveGpsTracking ? 'STOP TRACK' : 'LIVE TRACK'}
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
-              Images will be processed visually as unlocated reports without mapping coordinates.
+            <div className="p-4 bg-[#F0F0F0] border-[3px] border-[#000000] font-mono text-xs text-[#000000] uppercase">
+              IMAGES PROCESSED VISUALLY WITHOUT GEOTAGGING.
             </div>
           )}
         </div>
 
         {/* Inference Inspection Output */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono">Detection Output</h3>
+        <div className="bg-[#FFFFFF] border-[5px] border-[#000000] p-6 space-y-3">
+          <div className="flex items-center justify-between border-b-[3px] border-[#000000] pb-3">
+            <h3 className="font-headline text-sm uppercase text-[#000000]">DETECTION OUTPUT</h3>
             {result && (
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
-                result.total_potholes_found > 0 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400'
-              }`}>
-                {result.total_potholes_found} Hazard(s)
+              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 border-[2px] border-[#000000] bg-[#000000] text-[#FFFFFF]">
+                {result.total_potholes_found} HAZARD(S)
               </span>
             )}
           </div>
@@ -423,40 +530,39 @@ export const LiveCameraDetector: React.FC<LiveCameraDetectorProps> = ({ onObserv
           {result ? (
             <div className="space-y-3">
               {result.detections.length === 0 ? (
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400 space-y-1">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
-                  <p className="font-semibold text-slate-200">No Road Cavities Detected</p>
-                  <p className="text-[11px] text-slate-500">Surface appears continuous without prominent potholes.</p>
+                <div className="p-4 bg-[#F0F0F0] border-[3px] border-[#000000] text-center font-mono text-xs uppercase text-[#000000]">
+                  NO ROAD DEFECTS DETECTED.
                 </div>
               ) : (
                 <div className="space-y-2">
+                  <div className="p-2.5 bg-[#008000] text-[#FFFFFF] font-mono font-bold text-xs flex items-center justify-between uppercase">
+                    <span>✓ {result.detections.length} DEFECT(S) GEOTAGGED</span>
+                    <span className="text-[10px] underline">MAPPED TO GPS</span>
+                  </div>
                   {result.detections.map((d, idx) => (
-                    <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1 text-xs">
+                    <div key={idx} className="p-3 bg-[#FFFFFF] border-[3px] border-[#000000] space-y-1 text-xs font-mono">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-200 uppercase font-mono">Pothole #{idx + 1}</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
-                          d.severity === 'critical' ? 'bg-rose-500/20 text-rose-400' :
-                          d.severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                          d.severity === 'medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+                        <span className="font-bold uppercase">POTHOLE #{idx + 1}</span>
+                        <span className={`px-2 py-0.5 border-[2px] font-bold uppercase ${
+                          d.severity === 'critical' ? 'border-[#FF0000] text-[#FF0000]' :
+                          d.severity === 'high' ? 'border-[#FFA500] text-[#FFA500]' :
+                          d.severity === 'medium' ? 'border-[#FFA500] text-[#FFA500]' : 'border-[#008000] text-[#008000]'
                         }`}>
                           {d.severity}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1">
-                        <div>Confidence: <strong className="text-white font-mono">{(d.confidence * 100).toFixed(0)}%</strong></div>
-                        <div>Visual Area: <strong className="text-white font-mono">{(d.area_ratio * 100).toFixed(1)}%</strong></div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t-[1px] border-[#000000]">
+                        <div>CONF: {(d.confidence * 100).toFixed(0)}%</div>
+                        <div>AREA: {(d.area_ratio * 100).toFixed(1)}%</div>
                       </div>
                     </div>
                   ))}
-                  <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-800/40 text-[11px] text-cyan-300">
-                    <span className="font-semibold">Cloud Ingestion:</span> Detections clustered into central hazard database.
-                  </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="p-6 text-center text-xs text-slate-500 italic">
-              Awaiting camera snapshot or image upload to run inference...
+            <div className="p-4 bg-[#F0F0F0] border-[2px] border-dashed border-[#000000] text-center font-mono text-xs uppercase text-[#000000]">
+              AWAITING SNAPSHOT OR FILE UPLOAD...
             </div>
           )}
         </div>

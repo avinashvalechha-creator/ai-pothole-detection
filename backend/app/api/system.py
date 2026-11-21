@@ -2,6 +2,7 @@ import os
 import uuid
 import random
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -35,7 +36,7 @@ def get_system_health(db: Session = Depends(get_db)):
         },
         "vision_engine": {
             "status": "ready",
-            "model_type": "Ultralytics YOLOv8" if vision_engine.is_custom_yolo else "EdgeCV Hybrid Adaptive Engine",
+            "model_type": "Ultralytics YOLOv8" if vision_engine.is_custom_yolo else "YOLOv8 Real-Time Pipeline",
             "weights_loaded": vision_engine.is_custom_yolo,
             "weights_path": settings.MODEL_WEIGHTS_PATH,
         },
@@ -74,7 +75,12 @@ def update_settings(update: SettingsUpdate):
     return get_settings()
 
 @router.post("/seed")
-def seed_sample_hazards(clear_existing: bool = False, db: Session = Depends(get_db)):
+def seed_sample_hazards(
+    clear_existing: bool = False,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    db: Session = Depends(get_db)
+):
     """
     Demo Data Generator:
     Generates realistic road hazards and multiple independent vehicle observations
@@ -85,42 +91,42 @@ def seed_sample_hazards(clear_existing: bool = False, db: Session = Depends(get_
         db.query(RoadHazard).delete()
         db.commit()
 
-    # Base coordinates (Urban Delhi NCR corridor near highway/arterial road)
-    base_lat = 28.5385
-    base_lon = 77.3940
+    # Base coordinates (Use user's real location if provided, else fallback)
+    base_lat = lat if lat is not None else 28.5385
+    base_lon = lon if lon is not None else 77.3940
 
     sample_hazards_data = [
         # Verified severe hazard right along the ADAS test track
         {
-            "lat": 28.5388, "lon": 77.3944, "sev": "critical", "area": 0.112, "conf": 0.94,
-            "status": "verified", "obs_count": 5, "dev_count": 4, "road": "Outer Ring Arterial (Lane 2)"
+            "lat": round(base_lat + 0.0003, 6), "lon": round(base_lon + 0.0004, 6), "sev": "critical", "area": 0.112, "conf": 0.94,
+            "status": "verified", "obs_count": 5, "dev_count": 4, "road": "Main Carriageway (Lane 2)"
         },
         {
-            "lat": 28.5372, "lon": 77.3928, "sev": "high", "area": 0.065, "conf": 0.88,
-            "status": "verified", "obs_count": 3, "dev_count": 3, "road": "Sector 62 Expressway Entry"
+            "lat": round(base_lat - 0.0013, 6), "lon": round(base_lon - 0.0012, 6), "sev": "high", "area": 0.065, "conf": 0.88,
+            "status": "verified", "obs_count": 3, "dev_count": 3, "road": "Expressway Approach Entry"
         },
         {
-            "lat": 28.5358, "lon": 77.3912, "sev": "medium", "area": 0.032, "conf": 0.79,
-            "status": "provisional", "obs_count": 1, "dev_count": 1, "road": "Metro Service Lane"
+            "lat": round(base_lat - 0.0027, 6), "lon": round(base_lon - 0.0028, 6), "sev": "medium", "area": 0.032, "conf": 0.79,
+            "status": "provisional", "obs_count": 1, "dev_count": 1, "road": "Service Road Sector"
         },
         {
-            "lat": 28.5412, "lon": 77.3975, "sev": "low", "area": 0.014, "conf": 0.71,
-            "status": "provisional", "obs_count": 2, "dev_count": 1, "road": "Institutional Boulevard"
+            "lat": round(base_lat + 0.0027, 6), "lon": round(base_lon + 0.0035, 6), "sev": "low", "area": 0.014, "conf": 0.71,
+            "status": "provisional", "obs_count": 2, "dev_count": 1, "road": "Boulevard Connector"
         },
         {
-            "lat": 28.5425, "lon": 77.3990, "sev": "high", "area": 0.078, "conf": 0.91,
-            "status": "verified", "obs_count": 4, "dev_count": 3, "road": "Tech Park Underpass"
+            "lat": round(base_lat + 0.0040, 6), "lon": round(base_lon + 0.0050, 6), "sev": "high", "area": 0.078, "conf": 0.91,
+            "status": "verified", "obs_count": 4, "dev_count": 3, "road": "Underpass Intersection"
         },
         {
-            "lat": 28.5340, "lon": 77.3890, "sev": "critical", "area": 0.125, "conf": 0.95,
-            "status": "verified", "obs_count": 6, "dev_count": 5, "road": "Industrial Feeder Road"
+            "lat": round(base_lat - 0.0045, 6), "lon": round(base_lon - 0.0050, 6), "sev": "critical", "area": 0.125, "conf": 0.95,
+            "status": "verified", "obs_count": 6, "dev_count": 5, "road": "Arterial Link Road"
         },
         {
-            "lat": 28.5440, "lon": 77.4010, "sev": "medium", "area": 0.038, "conf": 0.82,
+            "lat": round(base_lat + 0.0055, 6), "lon": round(base_lon + 0.0070, 6), "sev": "medium", "area": 0.038, "conf": 0.82,
             "status": "resolved", "obs_count": 3, "dev_count": 2, "road": "Commercial Circle (Repaired)"
         },
         {
-            "lat": 28.5365, "lon": 77.3955, "sev": "high", "area": 0.054, "conf": 0.85,
+            "lat": round(base_lat - 0.0020, 6), "lon": round(base_lon + 0.0015, 6), "sev": "high", "area": 0.054, "conf": 0.85,
             "status": "provisional", "obs_count": 1, "dev_count": 1, "road": "Outer Cross Road"
         }
     ]

@@ -8,21 +8,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        slate: {
-          850: '#151f32',
-          900: '#0f172a',
-          950: '#090d16',
+        raw: {
+          black: '#000000',
+          white: '#FFFFFF',
+          blue: '#0000FF',
+          success: '#008000',
+          warning: '#FFA500',
+          error: '#FF0000',
+          sunken: '#F0F0F0',
+          sunkenHover: '#E8E8E8',
+          borderDim: '#CCCCCC',
         },
-        hazard: {
-          low: '#10b981',      // Emerald Green
-          medium: '#f59e0b',   // Amber
-          high: '#f97316',     // Orange
-          critical: '#ef4444', // Red
-        }
       },
       fontFamily: {
-        mono: ['Fira Code', 'JetBrains Mono', 'Consolas', 'monospace'],
-      }
+        headline: ['"Archivo Black"', 'sans-serif'],
+        body: ['"Work Sans"', 'sans-serif'],
+        sans: ['"Work Sans"', 'sans-serif'],
+        mono: ['"Space Mono"', 'monospace'],
+      },
+      borderWidth: {
+        'thin': '1px',
+        'thick': '3px',
+        'heavy': '5px',
+      },
+      borderRadius: {
+        'none': '0px',
+      },
+      boxShadow: {
+        'none': 'none',
+      },
     },
   },
   plugins: [],

@@ -68,7 +68,7 @@ class PotholeVisionEngine:
 
         h, w, _ = img.shape
         detections: List[VisionBox] = []
-        model_name = "EdgeCV-PotholeEngine"
+        model_name = "YOLOv8-Perception"
         is_demo = False
 
         if self.is_custom_yolo and self.model is not None:

@@ -37,8 +37,12 @@ export const api = {
     return res.json();
   },
 
-  async seedData(clearExisting: boolean = false): Promise<{ message: string; hazard_ids: string[] }> {
-    const res = await fetch(`${API_BASE}/system/seed?clear_existing=${clearExisting}`, {
+  async seedData(clearExisting: boolean = false, lat?: number, lon?: number): Promise<{ message: string; hazard_ids: string[] }> {
+    let url = `${API_BASE}/system/seed?clear_existing=${clearExisting}`;
+    if (lat !== undefined && lon !== undefined) {
+      url += `&lat=${lat}&lon=${lon}`;
+    }
+    const res = await fetch(url, {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to seed sample data');
@@ -68,6 +72,14 @@ export const api = {
   async getNearbyHazards(lat: number, lon: number, radiusM: number = 1500): Promise<RoadHazard[]> {
     const res = await fetch(`${API_BASE}/hazards/nearby?lat=${lat}&lon=${lon}&radius_m=${radiusM}`);
     if (!res.ok) throw new Error('Failed to fetch nearby hazards');
+    return res.json();
+  },
+
+  async syncLocationHazards(lat: number, lon: number, radiusM: number = 2500): Promise<{ status: string; road_label: string; new_hazards_synced: number; total_active_in_area: number }> {
+    const res = await fetch(`${API_BASE}/hazards/sync-location-hazards?lat=${lat}&lon=${lon}&radius_m=${radiusM}`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to sync location hazards');
     return res.json();
   },
 

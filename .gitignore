@@ -40,3 +40,5 @@ frontend/.vite/
 Thumbs.db
 backend/uploads/*
 !backend/uploads/.gitkeep
+scratch/
+*.png

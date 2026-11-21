@@ -2,13 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   Settings as SettingsIcon, 
   Save, 
-  RotateCcw, 
   Cpu, 
-  Database, 
   Sliders, 
   Check, 
-  RefreshCw,
-  AlertTriangle
+  RefreshCw
 } from 'lucide-react';
 import { SystemSettings, SystemHealth } from '../services/types';
 import { api } from '../services/api';
@@ -59,36 +56,38 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ health, onRefreshDat
   };
 
   if (!settings) {
-    return <div className="p-8 text-center text-slate-400">Loading system settings...</div>;
+    return <div className="p-8 text-center font-mono text-black">LOADING CALIBRATION PARAMETERS...</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <div className="flex items-center space-x-2 text-cyan-400 text-xs font-mono font-semibold mb-1">
+      {/* Header - RawBlock 5px border */}
+      <div className="bg-white border-heavy border-black p-6 space-y-2">
+        <div className="flex items-center space-x-2 text-black text-xs font-mono font-bold uppercase mb-1">
           <SettingsIcon className="w-4 h-4" />
           <span>SYSTEM CALIBRATION & THRESHOLDS</span>
         </div>
-        <h1 className="text-xl font-black text-white">Platform Configuration</h1>
-        <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+        <h1 className="font-headline text-2xl text-black uppercase tracking-tight">
+          PLATFORM CONFIGURATION
+        </h1>
+        <p className="font-body text-xs text-black max-w-2xl leading-relaxed">
           Configure spatial clustering sensitivity, crowdsourced verification thresholds, and in-cabin ADAS warning parameters.
         </p>
       </div>
 
       <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Spatial & Verification Thresholds */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <div className="flex items-center space-x-2 border-b border-slate-800 pb-3">
-            <Sliders className="w-4 h-4 text-cyan-400" />
-            <h2 className="text-sm font-bold text-white">Spatial Clustering & Verification Logic</h2>
+        <div className="bg-white border-heavy border-black p-6 space-y-5">
+          <div className="flex items-center space-x-2 border-b-thick border-black pb-3">
+            <Sliders className="w-4 h-4 text-black" />
+            <h2 className="font-headline text-sm uppercase text-black">SPATIAL CLUSTERING & VERIFICATION</h2>
           </div>
 
           <div className="space-y-4 text-xs font-mono">
-            <div>
-              <div className="flex justify-between items-center text-slate-300 mb-1">
-                <span>Cluster Radius (Meters):</span>
-                <strong className="text-cyan-400">{settings.cluster_radius_meters}m</strong>
+            <div className="p-3 bg-[#F0F0F0] border-thick border-black space-y-2">
+              <div className="flex justify-between items-center text-black">
+                <span className="font-headline uppercase">CLUSTER RADIUS:</span>
+                <strong className="text-base">{settings.cluster_radius_meters}M</strong>
               </div>
               <input
                 type="range"
@@ -97,15 +96,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ health, onRefreshDat
                 step="1"
                 value={settings.cluster_radius_meters}
                 onChange={(e) => setSettings({ ...settings, cluster_radius_meters: parseFloat(e.target.value) })}
-                className="w-full accent-cyan-500 cursor-pointer"
+                className="w-full accent-black cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 block">Maximum geodesic distance to coalesce observations into one road defect.</span>
+              <span className="text-[10px] text-black block uppercase">MAXIMUM GEODESIC DISTANCE TO COALESCE OBSERVATIONS.</span>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center text-slate-300 mb-1">
-                <span>Min Observations for Verification:</span>
-                <strong className="text-cyan-400">{settings.verification_min_observations}</strong>
+            <div className="p-3 bg-[#F0F0F0] border-thick border-black space-y-2">
+              <div className="flex justify-between items-center text-black">
+                <span className="font-headline uppercase">MIN OBSERVATIONS:</span>
+                <strong className="text-base">{settings.verification_min_observations}</strong>
               </div>
               <input
                 type="range"
@@ -114,15 +113,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ health, onRefreshDat
                 step="1"
                 value={settings.verification_min_observations}
                 onChange={(e) => setSettings({ ...settings, verification_min_observations: parseInt(e.target.value) })}
-                className="w-full accent-cyan-500 cursor-pointer"
+                className="w-full accent-black cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 block">Total observation reports required to promote from provisional to verified.</span>
+              <span className="text-[10px] text-black block uppercase">TOTAL OBSERVATION REPORTS REQUIRED TO VERIFY.</span>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center text-slate-300 mb-1">
-                <span>Min Independent Vehicle Devices:</span>
-                <strong className="text-cyan-400">{settings.verification_min_devices}</strong>
+            <div className="p-3 bg-[#F0F0F0] border-thick border-black space-y-2">
+              <div className="flex justify-between items-center text-black">
+                <span className="font-headline uppercase">MIN VEHICLES:</span>
+                <strong className="text-base">{settings.verification_min_devices}</strong>
               </div>
               <input
                 type="range"
@@ -131,25 +130,25 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ health, onRefreshDat
                 step="1"
                 value={settings.verification_min_devices}
                 onChange={(e) => setSettings({ ...settings, verification_min_devices: parseInt(e.target.value) })}
-                className="w-full accent-cyan-500 cursor-pointer"
+                className="w-full accent-black cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 block">Guarantees reports originate from separate vehicles to prevent duplicate video frames counting.</span>
+              <span className="text-[10px] text-black block uppercase">INDEPENDENT DEVICE CHECKS TO PREVENT REPEATED FRAMES.</span>
             </div>
           </div>
         </div>
 
         {/* ADAS Threat Cone & Computer Vision Sensitivity */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <div className="flex items-center space-x-2 border-b border-slate-800 pb-3">
-            <Cpu className="w-4 h-4 text-cyan-400" />
-            <h2 className="text-sm font-bold text-white">ADAS Driver Warning & AI Sensitivity</h2>
+        <div className="bg-white border-heavy border-black p-6 space-y-5">
+          <div className="flex items-center space-x-2 border-b-thick border-black pb-3">
+            <Cpu className="w-4 h-4 text-black" />
+            <h2 className="font-headline text-sm uppercase text-black">ADAS DRIVER WARNING & AI</h2>
           </div>
 
           <div className="space-y-4 text-xs font-mono">
-            <div>
-              <div className="flex justify-between items-center text-slate-300 mb-1">
-                <span>ADAS Warning Distance:</span>
-                <strong className="text-cyan-400">{settings.adas_warning_distance_meters}m</strong>
+            <div className="p-3 bg-[#F0F0F0] border-thick border-black space-y-2">
+              <div className="flex justify-between items-center text-black">
+                <span className="font-headline uppercase">WARNING DISTANCE:</span>
+                <strong className="text-base">{settings.adas_warning_distance_meters}M</strong>
               </div>
               <input
                 type="range"
@@ -158,15 +157,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ health, onRefreshDat
                 step="10"
                 value={settings.adas_warning_distance_meters}
                 onChange={(e) => setSettings({ ...settings, adas_warning_distance_meters: parseFloat(e.target.value) })}
-                className="w-full accent-cyan-500 cursor-pointer"
+                className="w-full accent-black cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 block">Sensor preview horizon in front of traveling vehicle.</span>
+              <span className="text-[10px] text-black block uppercase">SENSOR PREVIEW HORIZON IN FRONT OF VEHICLE.</span>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center text-slate-300 mb-1">
-                <span>Warning Cone Angle:</span>
-                <strong className="text-cyan-400">±{settings.adas_warning_cone_degrees}°</strong>
+            <div className="p-3 bg-[#F0F0F0] border-thick border-black space-y-2">
+              <div className="flex justify-between items-center text-black">
+                <span className="font-headline uppercase">WARNING CONE ANGLE:</span>
+                <strong className="text-base">±{settings.adas_warning_cone_degrees}°</strong>
               </div>
               <input
                 type="range"
@@ -175,15 +174,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ health, onRefreshDat
                 step="5"
                 value={settings.adas_warning_cone_degrees}
                 onChange={(e) => setSettings({ ...settings, adas_warning_cone_degrees: parseFloat(e.target.value) })}
-                className="w-full accent-cyan-500 cursor-pointer"
+                className="w-full accent-black cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 block">Angular corridor matching vehicle heading with hazard bearing.</span>
+              <span className="text-[10px] text-black block uppercase">ANGULAR CORRIDOR MATCHING HEADING WITH HAZARD BEARING.</span>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center text-slate-300 mb-1">
-                <span>AI Confidence Gate:</span>
-                <strong className="text-cyan-400">{Math.round(settings.confidence_threshold * 100)}%</strong>
+            <div className="p-3 bg-[#F0F0F0] border-thick border-black space-y-2">
+              <div className="flex justify-between items-center text-black">
+                <span className="font-headline uppercase">AI CONFIDENCE GATE:</span>
+                <strong className="text-base">{Math.round(settings.confidence_threshold * 100)}%</strong>
               </div>
               <input
                 type="range"
@@ -192,41 +191,31 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ health, onRefreshDat
                 step="0.05"
                 value={settings.confidence_threshold}
                 onChange={(e) => setSettings({ ...settings, confidence_threshold: parseFloat(e.target.value) })}
-                className="w-full accent-cyan-500 cursor-pointer"
+                className="w-full accent-black cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 block">Minimum detection score required for cloud ingestion.</span>
+              <span className="text-[10px] text-black block uppercase">MINIMUM DETECTION SCORE FOR CLOUD INGESTION.</span>
             </div>
           </div>
         </div>
 
         {/* Action Save Button */}
-        <div className="lg:col-span-2 flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <div className="flex items-center space-x-2">
+        <div className="lg:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-6 bg-white border-heavy border-black gap-4">
+          <div className="flex items-center space-x-3">
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center space-x-2 px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/25 transition"
+              className="px-6 py-3 bg-black hover:bg-white text-white hover:text-black border-thick border-black font-headline text-xs uppercase tracking-wider transition flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              <span>{saving ? 'Updating...' : 'Save Parameters'}</span>
+              <span>{saving ? '[UPDATING...]' : '[SAVE PARAMETERS]'}</span>
             </button>
             {savedSuccess && (
-              <span className="flex items-center space-x-1 text-xs text-emerald-400 font-mono">
+              <span className="flex items-center space-x-1.5 text-xs text-[#008000] font-mono font-bold uppercase">
                 <Check className="w-4 h-4" />
-                <span>Configuration saved successfully!</span>
+                <span>SAVED SUCCESSFULLY</span>
               </span>
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={handleResetSeed}
-            disabled={seeding}
-            className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-400 border border-slate-700 hover:border-rose-800 rounded-xl text-xs font-semibold transition"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${seeding ? 'animate-spin' : ''}`} />
-            <span>Reset Database to Demo State</span>
-          </button>
         </div>
       </form>
     </div>
