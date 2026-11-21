@@ -1,0 +1,15 @@
+{
+  "total_hazards": 23284,
+  "verified_hazards": 20264,
+  "provisional_hazards": 3020,
+  "high_and_critical_hazards": 14046,
+  "total_observations": 189449,
+  "observations_today": 23284,
+  "verification_rate_percent": 87.0,
+  "severity_breakdown": {
+    "critical": 5854,
+    "high": 8192,
+    "medium": 5811,
+    "low": 3427
+  }
+}

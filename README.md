@@ -11,6 +11,7 @@
 <br/>
 
 [![Status](https://img.shields.io/badge/STATUS-PRODUCTION--READY-black?style=for-the-badge&logo=fastapi&logoColor=white)](https://github.com/avinashvalechha-creator/ai-pothole-detection)
+[![Live Demo](https://img.shields.io/badge/LIVE_DEMO-GITHUB_PAGES-22C55E?style=for-the-badge&logo=githubpages&logoColor=white)](https://avinashvalechha-creator.github.io/ai-pothole-detection/)
 [![Python](https://img.shields.io/badge/PYTHON-3.11+-black?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![YOLOv8](https://img.shields.io/badge/YOLOv8-ULTRALYTICS-black?style=for-the-badge&logo=pytorch&logoColor=white)](https://ultralytics.com)
 [![React](https://img.shields.io/badge/REACT-18.3-black?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
