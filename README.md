@@ -5,20 +5,20 @@
 <br/>
 
 <a href="https://git.io/typing-svg">
-  <img src="https://readme-typing-svg.demolab.com?font=Space+Mono&weight=700&size=20&duration=3000&pause=1000&color=000000&background=FFFFFF&vCenter=true&width=620&lines=23%2C284%2B+VERIFIED+ROAD+DEFECTS+DETECTED;EDGE+COMPUTER+VISION+%2B+HAVERSINE+CLUSTERING;EXPLAINABLE+SURFACE+CLASSIFICATION;PAN-INDIA+LAND-SNAPPED+HIGHWAY+CORRIDORS;MULTI-VEHICLE+DE-DUPLICATION+CONSENSUS" alt="RoadSense Telemetry Capabilities" />
+  <img src="https://readme-typing-svg.demolab.com?font=Space+Mono&weight=700&size=18&duration=3000&pause=1000&color=22C55E&background=00000000&center=true&vCenter=true&width=720&lines=23%2C284%2B+VERIFIED+ROAD+DEFECTS+DETECTED;EDGE+COMPUTER+VISION+%2B+HAVERSINE+CLUSTERING;EXPLAINABLE+SURFACE+CLASSIFICATION;PAN-INDIA+LAND-SNAPPED+HIGHWAY+CORRIDORS;MULTI-VEHICLE+DE-DUPLICATION+CONSENSUS" alt="RoadSense Telemetry Capabilities" />
 </a>
 
 <br/>
 
-[![Status](https://img.shields.io/badge/STATUS-PRODUCTION--READY-black?style=for-the-badge&logo=fastapi&logoColor=white)](https://github.com/avinashvalechha-creator/ai-pothole-detection)
-[![Live Demo](https://img.shields.io/badge/LIVE_DEMO-GITHUB_PAGES-22C55E?style=for-the-badge&logo=githubpages&logoColor=white)](https://avinashvalechha-creator.github.io/ai-pothole-detection/)
-[![Python](https://img.shields.io/badge/PYTHON-3.11+-black?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![YOLOv8](https://img.shields.io/badge/YOLOv8-ULTRALYTICS-black?style=for-the-badge&logo=pytorch&logoColor=white)](https://ultralytics.com)
-[![React](https://img.shields.io/badge/REACT-18.3-black?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TYPESCRIPT-5.6-black?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![TailwindCSS](https://img.shields.io/badge/TAILWIND-3.4-black?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Leaflet](https://img.shields.io/badge/GIS-LEAFLET-black?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com)
-[![License](https://img.shields.io/badge/LICENSE-MIT-black?style=for-the-badge)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Production--Ready-0A0A0A?style=for-the-badge&logo=fastapi&logoColor=22C55E)](https://github.com/avinashvalechha-creator/ai-pothole-detection)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-22C55E?style=for-the-badge&logo=githubpages&logoColor=black)](https://avinashvalechha-creator.github.io/ai-pothole-detection/)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://ultralytics.com)
+[![React](https://img.shields.io/badge/React-18.3-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Leaflet](https://img.shields.io/badge/GIS-Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com)
+[![License](https://img.shields.io/badge/License-MIT-0A0A0A?style=for-the-badge)](LICENSE)
 
 <br/>
 
