@@ -82,3 +82,27 @@ def test_adas_threat_cone_warning():
     assert alert_away.alert_level == "NONE"
 
     session.close()
+
+
+def test_vision_pipeline_face_suppression():
+    face_img = np.full((480, 640, 3), (130, 160, 210), dtype=np.uint8)
+    cv2.circle(face_img, (300, 240), 15, (20, 20, 20), -1)
+    cv2.circle(face_img, (340, 240), 15, (20, 20, 20), -1)
+
+    _, encoded = cv2.imencode('.jpg', face_img)
+    result = vision_engine.detect(encoded.tobytes(), 'face_test.jpg')
+
+    assert result is not None
+    assert result.total_potholes_found == 0
+    assert len(result.detections) == 0
+
+def test_vision_pipeline_non_road_suppression():
+    wall_img = np.full((480, 640, 3), (40, 180, 220), dtype=np.uint8)
+    cv2.rectangle(wall_img, (200, 200), (300, 300), (10, 10, 10), -1)
+
+    _, encoded = cv2.imencode('.jpg', wall_img)
+    result = vision_engine.detect(encoded.tobytes(), 'wall_test.jpg')
+
+    assert result is not None
+    assert result.total_potholes_found == 0
+    assert len(result.detections) == 0

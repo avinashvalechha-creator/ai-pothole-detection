@@ -71,12 +71,46 @@ class PotholeVisionEngine:
         model_name = "YOLOv8-Perception"
         is_demo = False
 
-        if self.is_custom_yolo and self.model is not None:
-            # 1. Run YOLO inference
+        # Guardrail 1: Human Face & Cabin Skin-Tone Check
+        b_ch, g_ch, r_ch = cv2.split(img)
+        ycrcb = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+        cr = ycrcb[:, :, 1]
+        cb = ycrcb[:, :, 2]
+        skin_mask = (r_ch > 95) & (g_ch > 40) & (b_ch > 20) &                     ((r_ch.astype(int) - g_ch.astype(int)) > 12) &                     (r_ch > b_ch) &                     (cr >= 135) & (cr <= 175) & (cb >= 80) & (cb <= 125)
+        skin_ratio = float(np.mean(skin_mask))
+
+        # Guardrail 2: Road Surface (Asphalt) Verification in Lower ROI (65%)
+        roi_start_y = int(h * 0.35)
+        roi_bgr = img[roi_start_y:, :]
+        roi_hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
+        roi_gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
+        
+        sat = roi_hsv[:, :, 1]
+        val = roi_hsv[:, :, 2]
+        rb, rg, rr = cv2.split(roi_bgr)
+        diff_rg = np.abs(rr.astype(int) - rg.astype(int))
+        diff_gb = np.abs(rg.astype(int) - rb.astype(int))
+        diff_rb = np.abs(rr.astype(int) - rb.astype(int))
+        
+        asphalt_mask = (sat < 45) & (val >= 25) & (val <= 180) & (diff_rg <= 24) & (diff_gb <= 24) & (diff_rb <= 24)
+        asphalt_ratio = float(np.mean(asphalt_mask))
+        std_val = float(np.std(roi_gray))
+
+        is_face_scene = skin_ratio > 0.065
+        is_non_road = asphalt_ratio < 0.20 or std_val < 5.0 or std_val > 65.0
+
+        if is_face_scene:
+            # Face / In-Cabin selfie mode: strictly mute all pothole detections
+            detections = []
+        elif is_non_road and not self.is_custom_yolo:
+            # Indoor / Wall / Desk / Ceiling: suppress all pothole detections
+            detections = []
+        elif self.is_custom_yolo and self.model is not None:
+            # 1. Run YOLO inference on verified road surface
             model_name = "YOLOv8-PotholeModel"
             results = self.model.predict(img, conf=settings.CONFIDENCE_THRESHOLD, verbose=False)
-            for r in results:
-                for box in r.boxes:
+            for r_res in results:
+                for box in r_res.boxes:
                     xyxy = box.xyxy[0].tolist()
                     conf = float(box.conf[0])
                     bx = xyxy[0] / w
@@ -97,13 +131,8 @@ class PotholeVisionEngine:
                         label="pothole"
                     ))
         else:
-            # 2. Real-time Explainable CV Pipeline:
-            # Preprocessing: grayscale, road ROI lower-half focus, bilateral filter, adaptive threshold & contour analysis
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # Vehicle road cameras typically observe the road surface in the lower 70% of the frame
-            roi_start_y = int(h * 0.30)
-            roi = gray[roi_start_y:, :]
+            # 2. Real-time Explainable CV Pipeline on verified asphalt road surface:
+            roi = roi_gray
             
             # Smooth noise while preserving road crack / cavity edges
             filtered = cv2.bilateralFilter(roi, 9, 75, 75)
@@ -121,8 +150,8 @@ class PotholeVisionEngine:
             contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             frame_area = float(w * h)
-            min_area_px = frame_area * 0.004  # at least 0.4% of screen
-            max_area_px = frame_area * 0.40   # at most 40% (prevent horizon/sky misclassification)
+            min_area_px = frame_area * 0.005  # at least 0.5% of screen
+            max_area_px = frame_area * 0.35   # at most 35% (prevent horizon/sky misclassification)
 
             for cnt in contours:
                 area_px = cv2.contourArea(cnt)
@@ -133,7 +162,7 @@ class PotholeVisionEngine:
                     
                     aspect_ratio = cw / float(max(1, ch))
                     # Road potholes are generally elliptical/irregular, not ultra-tall thin lines
-                    if 0.4 <= aspect_ratio <= 3.8:
+                    if 0.4 <= aspect_ratio <= 3.5:
                         norm_x = x / float(w)
                         norm_y = full_y / float(h)
                         norm_w = cw / float(w)

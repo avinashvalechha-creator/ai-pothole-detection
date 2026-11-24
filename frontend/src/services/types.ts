@@ -71,6 +71,8 @@ export interface VisionInferenceResult {
   total_potholes_found: number;
   highest_severity: SeverityLevel | 'none';
   saved_observations?: Observation[];
+  scene_type?: 'face_detected' | 'non_road_scene' | 'road_clear' | 'pothole_detected';
+  scene_message?: string;
 }
 
 export interface Telemetry {

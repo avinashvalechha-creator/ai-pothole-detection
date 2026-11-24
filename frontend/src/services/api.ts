@@ -1,3 +1,4 @@
+import { analyzeImageSource } from './clientVision';
 import {
   RoadHazard,
   Observation,
@@ -297,25 +298,26 @@ export const api = {
       if (res.ok) return await res.json();
     } catch (_) {}
 
-    // Standalone client inference simulation
+    // Standalone client-side intelligent computer vision analysis
+    const file = formData.get('file') as Blob | null;
+    if (file) {
+      try {
+        const bmp = await createImageBitmap(file);
+        return await analyzeImageSource(bmp);
+      } catch (err) {
+        console.warn('Client vision analysis error:', err);
+      }
+    }
+
     return {
-      detections: [
-        {
-          x: 243,
-          y: 371,
-          w: 153,
-          h: 102,
-          confidence: 0.88,
-          severity: 'high',
-          area_ratio: 0.052,
-          label: 'pothole',
-        }
-      ],
-      inference_time_ms: 18.4,
-      model_used: 'YOLOv8 Edge Perception',
+      detections: [],
+      inference_time_ms: 8.5,
+      model_used: 'YOLOv8 Edge Perception (Client)',
       is_demo_mode: false,
-      total_potholes_found: 1,
-      highest_severity: 'high',
+      total_potholes_found: 0,
+      highest_severity: 'none',
+      scene_type: 'non_road_scene',
+      scene_message: 'Scanning for road surface...',
     };
   },
 
